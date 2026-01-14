@@ -1,0 +1,17 @@
+name: basse-tidsstampling
+region: ams3
+services:
+  - name: web
+    image:
+      registry: registry.digitalocean.com
+      repository: "__REPOSITORY__" # will be replaced by workflow (e.g. myregistry/basse-tidsstampling)
+      tag: "latest"
+    run_command: "node dist/basse-tidsstampling/server/server.mjs"
+    http_port: 4000
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    routes:
+      - path: "/"
+    envs:
+      - key: PORT
+        scope: RUN_TIME
