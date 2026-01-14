@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { APPS_SCRIPT_URL } from '../../environments/apps-script-url';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
@@ -13,7 +14,7 @@ export interface SheetsConfig {
 })
 export class GoogleSheetsService {
   // Google Apps Script Web App URL (ange din egen efter deployment)
-  private appsScriptUrl = 'YOUR_APPS_SCRIPT_URL_HERE';
+  private appsScriptUrl = APPS_SCRIPT_URL;
 
   constructor(private http: HttpClient) {}
 
