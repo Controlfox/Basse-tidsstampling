@@ -26,10 +26,10 @@ export class GoogleSheetsService {
       date,
       dayStartTime,
       dayEndTime: '', // Tom dagslut initialt
-      appsScriptUrl: this.appsScriptUrl,
     };
 
-    return this.http.post<any>('/api/save-to-sheets', payload);
+    // Skicka direkt till Google Apps Script
+    return this.http.post<any>(this.appsScriptUrl, payload);
   }
 
   /**
@@ -45,10 +45,10 @@ export class GoogleSheetsService {
       date,
       dayStartTime,
       dayEndTime,
-      appsScriptUrl: this.appsScriptUrl,
     };
 
-    return this.http.post<any>('/api/save-to-sheets', payload);
+    // Skicka direkt till Google Apps Script
+    return this.http.post<any>(this.appsScriptUrl, payload);
   }
 
   /**
@@ -66,11 +66,10 @@ export class GoogleSheetsService {
       startTime,
       endTime,
       description,
-      appsScriptUrl: this.appsScriptUrl,
     };
 
-    // Skicka via servern för att undvika CORS
-    return this.http.post<any>('/api/save-to-sheets', payload);
+    // Skicka direkt till Google Apps Script
+    return this.http.post<any>(this.appsScriptUrl, payload);
   }
 
   /**
