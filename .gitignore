@@ -37,6 +37,18 @@ yarn-error.log
 testem.log
 /typings
 
+# Secrets and credentials (do NOT commit these)
+.env
+.env.local
+*.env
+*.pem
+*.p12
+*.key
+credentials.json
+service-account*.json
+*.secret
+.do/app.rendered.yaml
+
 # System files
 .DS_Store
 Thumbs.db
