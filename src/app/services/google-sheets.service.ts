@@ -26,6 +26,7 @@ export class GoogleSheetsService {
       }
 
       const fullUrl = url.toString();
+      console.log('[Sheets beacon url]', fullUrl);
 
       try {
         // 1) Försök med sendBeacon (POST, response ignoreras)
