@@ -8,43 +8,66 @@ const TOKEN = 'BYT_MIG_TILL_EN_LANG_SLUMP_TOKEN_BAJS';
 export class GoogleSheetsService {
   private appsScriptUrl = APPS_SCRIPT_URL;
 
-  private fireAndForget(payload: Record<string, string>): Observable<void> {
+  // Viktigt: behåll referenser så requesten inte GC:as direkt
+  private pendingImgs: HTMLImageElement[] = [];
+
+  private sendGet(params: Record<string, string>): Observable<void> {
     return new Observable<void>((observer) => {
-      const data = { ...payload, token: TOKEN };
+      const url = new URL(this.appsScriptUrl);
 
-      try {
-        // 1) POST via sendBeacon (CORS-fritt att SKICKA; vi läser inget svar)
-        if (typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
-          const blob = new Blob([JSON.stringify(data)], {
-            type: 'application/json',
-          });
-          navigator.sendBeacon(this.appsScriptUrl, blob);
-          observer.next();
-          observer.complete();
-          return;
-        }
+      url.searchParams.set('token', TOKEN);
+      url.searchParams.set('_ts', String(Date.now())); // cache-buster
 
-        // 2) Fallback: GET via Image (querystring)
-        const url = new URL(this.appsScriptUrl);
-        url.searchParams.set('_ts', String(Date.now()));
-        Object.entries(data).forEach(([k, v]) =>
-          url.searchParams.set(k, v ?? '')
-        );
-
-        const img = new Image();
-        img.src = url.toString();
-
-        observer.next();
-        observer.complete();
-      } catch {
-        observer.next();
-        observer.complete();
+      for (const [k, v] of Object.entries(params)) {
+        url.searchParams.set(k, v ?? '');
       }
+
+      const fullUrl = url.toString();
+      console.log('[Sheets beacon url]', fullUrl);
+
+      // 1) Försök med fetch no-cors (skickar utan preflight, vi bryr oss inte om svaret)
+      if (typeof fetch !== 'undefined') {
+        fetch(fullUrl, {
+          method: 'GET',
+          mode: 'no-cors',
+          keepalive: true,
+        })
+          .catch(() => {
+            // Ignorera – vi kan inte läsa svar ändå
+          })
+          .finally(() => {
+            observer.next();
+            observer.complete();
+          });
+
+        return;
+      }
+
+      // 2) Fallback: Image, men vi MÅSTE hålla kvar referensen en stund
+      const img = new Image();
+      this.pendingImgs.push(img);
+
+      const cleanup = () => {
+        const idx = this.pendingImgs.indexOf(img);
+        if (idx >= 0) this.pendingImgs.splice(idx, 1);
+      };
+
+      // Vi ignorerar onload/onerror – målet är bara att skicka requesten
+      img.onload = cleanup;
+      img.onerror = cleanup;
+
+      img.src = fullUrl;
+
+      // Extra säkerhet: städa efter 10s även om inget event triggas
+      setTimeout(cleanup, 10_000);
+
+      observer.next();
+      observer.complete();
     });
   }
 
   saveDaySessionHeader(date: string, dayStartTime: string): Observable<void> {
-    return this.fireAndForget({
+    return this.sendGet({
       type: 'daySessionHeader',
       date,
       dayStartTime,
@@ -57,7 +80,7 @@ export class GoogleSheetsService {
     dayStartTime: string,
     dayEndTime: string
   ): Observable<void> {
-    return this.fireAndForget({
+    return this.sendGet({
       type: 'updateDaySessionEndTime',
       date,
       dayStartTime,
@@ -71,7 +94,7 @@ export class GoogleSheetsService {
     endTime: string,
     description: string
   ): Observable<void> {
-    return this.fireAndForget({
+    return this.sendGet({
       type: 'boatLog',
       boat,
       startTime,
