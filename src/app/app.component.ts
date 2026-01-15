@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -7,8 +7,7 @@ import {
   TimeLog,
   DaySession,
 } from './services/time-log.service';
-import { GoogleSheetsService } from './services/google-sheets.service';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -16,10 +15,9 @@ import { Observable } from 'rxjs';
   imports: [RouterOutlet, CommonModule, FormsModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
-  providers: [TimeLogService, GoogleSheetsService],
   host: { ngSkipHydration: 'true' },
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   title = 'Basse-tidsstampling';
 
   boats: string[] = ['Båt 1', 'Båt 2', 'Båt 3', 'Båt 4'];
@@ -39,11 +37,9 @@ export class AppComponent implements OnInit {
   timeSlots: string[] = [];
 
   private timerInterval: any;
+  private subscriptions = new Subscription();
 
-  constructor(
-    private timeLogService: TimeLogService,
-    private googleSheetsService: GoogleSheetsService
-  ) {
+  constructor(private timeLogService: TimeLogService) {
     this.timeLogs$ = this.timeLogService.getTimeLogs();
     this.currentLog$ = this.timeLogService.getCurrentLog();
     this.daySession$ = this.timeLogService.getDaySession();
@@ -51,7 +47,7 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.currentLog$.subscribe((log) => {
+    const sub = this.currentLog$.subscribe((log) => {
       this.isLogging = !!log;
       if (log) {
         this.startTimer(log);
@@ -59,6 +55,8 @@ export class AppComponent implements OnInit {
         this.stopTimer();
       }
     });
+
+    this.subscriptions.add(sub);
   }
 
   startLogging(): void {
@@ -118,6 +116,7 @@ export class AppComponent implements OnInit {
     dayEnd.setHours(hours, minutes, 0, 0);
 
     this.timeLogService.endDaySession(dayEnd);
+
     // Spara dagsession till Google Sheets
     this.timeLogService.saveDaySessionToSheets().subscribe({
       next: () => {
@@ -134,6 +133,7 @@ export class AppComponent implements OnInit {
   private stopTimer(): void {
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
+      this.timerInterval = null;
       this.elapsedTime = '00:00:00';
     }
   }
@@ -150,6 +150,7 @@ export class AppComponent implements OnInit {
   }
 
   ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
     this.stopTimer();
   }
 }
