@@ -51,17 +51,6 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Sätt Google Apps Script webhook URL här — använd en miljövariabel eller lägg in i App Platform som en runtime secret.
-    // OBS: URL-formatet måste vara /exec (inte /usercopy)
-    const appsScriptUrl = 'YOUR_APPS_SCRIPT_URL_HERE';
-    if (appsScriptUrl !== 'YOUR_APPS_SCRIPT_URL_HERE') {
-      this.googleSheetsService.setCredentials(appsScriptUrl);
-    } else {
-      console.warn(
-        'Google Apps Script URL saknas. Sätt den via miljövariabel eller App Platform runtime secret.'
-      );
-    }
-
     this.currentLog$.subscribe((log) => {
       this.isLogging = !!log;
       if (log) {
