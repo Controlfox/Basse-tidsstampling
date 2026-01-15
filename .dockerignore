@@ -1,9 +1,0 @@
-node_modules
-dist
-.git
-.github
-.vscode
-.env
-.idea
-npm-debug.log
-.DS_Store
