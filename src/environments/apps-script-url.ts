@@ -1,0 +1,1 @@
+export const APPS_SCRIPT_URL = '__APPS_SCRIPT_URL__';
