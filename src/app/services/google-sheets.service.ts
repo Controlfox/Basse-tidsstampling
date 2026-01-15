@@ -4,61 +4,39 @@ import { Observable } from 'rxjs';
 
 const TOKEN = 'BYT_MIG_TILL_EN_LANG_SLUMP_TOKEN_BAJS';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class GoogleSheetsService {
   private appsScriptUrl = APPS_SCRIPT_URL;
 
-  /**
-   * Fire-and-forget till Apps Script utan CORS-problem.
-   * Vi kan inte läsa svar eller HTTP-status från browsern, så vi complete:ar alltid.
-   */
-  private sendFireAndForget(params: Record<string, string>): Observable<void> {
+  private fireAndForget(payload: Record<string, string>): Observable<void> {
     return new Observable<void>((observer) => {
-      const url = new URL(this.appsScriptUrl);
-
-      url.searchParams.set('token', TOKEN);
-      url.searchParams.set('_ts', String(Date.now())); // cache-buster
-
-      for (const [k, v] of Object.entries(params)) {
-        url.searchParams.set(k, v ?? '');
-      }
-
-      const fullUrl = url.toString();
-      console.log('[Sheets beacon url]', fullUrl);
+      const data = { ...payload, token: TOKEN };
 
       try {
-        // 1) Försök med sendBeacon (POST, response ignoreras)
+        // 1) POST via sendBeacon (CORS-fritt att SKICKA; vi läser inget svar)
         if (typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
-          const ok = navigator.sendBeacon(fullUrl);
-          // ok säger bara om den köades, inte att den sparades i Sheets
+          const blob = new Blob([JSON.stringify(data)], {
+            type: 'application/json',
+          });
+          navigator.sendBeacon(this.appsScriptUrl, blob);
           observer.next();
           observer.complete();
           return;
         }
 
-        // 2) Fallback: fetch no-cors (GET). Response kan inte läsas, men requesten skickas.
-        if (typeof fetch !== 'undefined') {
-          fetch(fullUrl, { method: 'GET', mode: 'no-cors', keepalive: true })
-            .catch(() => {
-              // Ignorera – vi kan ändå inte veta säkert i statisk miljö
-            })
-            .finally(() => {
-              observer.next();
-              observer.complete();
-            });
-          return;
-        }
+        // 2) Fallback: GET via Image (querystring)
+        const url = new URL(this.appsScriptUrl);
+        url.searchParams.set('_ts', String(Date.now()));
+        Object.entries(data).forEach(([k, v]) =>
+          url.searchParams.set(k, v ?? '')
+        );
 
-        // 3) Sista fallback: Image (utan onerror/onload för att inte få "Beacon failed to load")
         const img = new Image();
-        img.src = fullUrl;
+        img.src = url.toString();
 
         observer.next();
         observer.complete();
       } catch {
-        // Även här: complete för att inte spamma fel – statisk site kan inte verifiera svar
         observer.next();
         observer.complete();
       }
@@ -66,7 +44,7 @@ export class GoogleSheetsService {
   }
 
   saveDaySessionHeader(date: string, dayStartTime: string): Observable<void> {
-    return this.sendFireAndForget({
+    return this.fireAndForget({
       type: 'daySessionHeader',
       date,
       dayStartTime,
@@ -79,7 +57,7 @@ export class GoogleSheetsService {
     dayStartTime: string,
     dayEndTime: string
   ): Observable<void> {
-    return this.sendFireAndForget({
+    return this.fireAndForget({
       type: 'updateDaySessionEndTime',
       date,
       dayStartTime,
@@ -93,7 +71,7 @@ export class GoogleSheetsService {
     endTime: string,
     description: string
   ): Observable<void> {
-    return this.sendFireAndForget({
+    return this.fireAndForget({
       type: 'boatLog',
       boat,
       startTime,
