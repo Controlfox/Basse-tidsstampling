@@ -20,7 +20,20 @@ import { Observable, Subscription } from 'rxjs';
 export class AppComponent implements OnInit, OnDestroy {
   title = 'Basse-tidsstampling';
 
-  boats: string[] = ['Båt 1', 'Båt 2', 'Båt 3', 'Båt 4'];
+  boats: string[] = [
+    'M/S EMELIE',
+    'M/S EMELIE II',
+    'M/S GRIM',
+    'E/S LISEN',
+    'M/S VIDSKÄR',
+    'M/S SJÖFRAKT',
+    'E/S LOTTEN',
+    'M/S QUEEN',
+    'M/S OLLIVER',
+    'M/S KÄRRAN',
+    'Terminalen',
+    'Lastbilar',
+  ];
   selectedBoat: string = '';
   workDescription: string = '';
   timeLogs$: Observable<TimeLog[]>;
