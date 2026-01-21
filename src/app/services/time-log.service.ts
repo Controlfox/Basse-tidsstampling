@@ -20,9 +20,7 @@ export interface DaySession {
   timeLogs: TimeLog[];
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class TimeLogService {
   private timeLogs$ = new BehaviorSubject<TimeLog[]>([]);
   private currentLog$ = new BehaviorSubject<TimeLog | null>(null);
@@ -35,24 +33,22 @@ export class TimeLogService {
   ) {
     this.loadTimeLogs();
     this.loadDaySession();
+    this.loadCurrentLog(); // <-- NYTT: återuppta aktiv logg efter reload/mobil
   }
 
-  // Get all time logs
   getTimeLogs(): Observable<TimeLog[]> {
     return this.timeLogs$.asObservable();
   }
 
-  // Get current active log
   getCurrentLog(): Observable<TimeLog | null> {
     return this.currentLog$.asObservable();
   }
 
-  // Get day session
   getDaySession(): Observable<DaySession | null> {
     return this.daySession$.asObservable();
   }
 
-  // Start a new day session
+  // --- Day session ---
   startDaySession(dayStartTime: Date): void {
     const today = new Date().toISOString().split('T')[0];
     const daySession: DaySession = {
@@ -60,102 +56,94 @@ export class TimeLogService {
       dayStartTime,
       timeLogs: [],
     };
+
     this.daySession$.next(daySession);
+
     if (isPlatformBrowser(this.platformId)) {
       localStorage.setItem('currentDaySession', JSON.stringify(daySession));
     }
 
-    // Spara dagsession-raden omedelbar när dagen startar
     this.saveDaySessionHeaderToSheets(dayStartTime);
   }
 
-  // End day session
   endDaySession(dayEndTime: Date): void {
     const currentSession = this.daySession$.value;
-    if (currentSession) {
-      currentSession.dayEndTime = dayEndTime;
-      this.daySession$.next(currentSession);
-      if (isPlatformBrowser(this.platformId)) {
-        localStorage.setItem(
-          'currentDaySession',
-          JSON.stringify(currentSession)
-        );
-      }
+    if (!currentSession) return;
+
+    currentSession.dayEndTime = dayEndTime;
+    this.daySession$.next(currentSession);
+
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.setItem('currentDaySession', JSON.stringify(currentSession));
     }
   }
 
-  // Check if day session is active
   isDaySessionActive(): boolean {
     return this.daySession$.value !== null;
   }
 
-  // Start a new time log
+  // --- Time log START ---
   startTimeLog(boat: string): void {
     const newLog: TimeLog = {
-      id: Date.now().toString(),
+      id: Date.now().toString(), // logId
       boat,
       startTime: new Date(),
       completed: false,
     };
+
     this.currentLog$.next(newLog);
-  }
+    this.saveCurrentLog(newLog);
 
-  // Stop current time log and save to storage
-  stopTimeLog(description: string): void {
-    const currentLog = this.currentLog$.value;
-    if (currentLog) {
-      currentLog.endTime = new Date();
-      currentLog.description = description;
-      currentLog.completed = true;
-
-      const logs = this.timeLogs$.value;
-      logs.push(currentLog);
-      this.timeLogs$.next(logs);
-
-      // Spara endast i webbläsare
-      if (isPlatformBrowser(this.platformId)) {
-        localStorage.setItem('timeLogs', JSON.stringify(logs));
-      }
-      this.currentLog$.next(null);
-
-      // Save to Google Sheets
-      this.saveToGoogleSheets(currentLog);
-    }
-  }
-
-  // Save to Google Sheets
-  private saveToGoogleSheets(log: TimeLog): void {
-    if (!log.endTime) return;
-
-    const startTimeStr =
-      log.startTime?.toLocaleTimeString('sv-SE', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }) || '';
-    const endTimeStr =
-      log.endTime?.toLocaleTimeString('sv-SE', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }) || '';
+    // Skriv START direkt till Sheets så sessionen finns även om mobilen stänger sidan
+    const startTimeStr = newLog.startTime.toLocaleTimeString('sv-SE', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
 
     this.googleSheetsService
-      .saveBoatLogToSheets(
-        log.boat,
-        startTimeStr,
-        endTimeStr,
-        log.description || ''
-      )
+      .startBoatLog(newLog.boat, startTimeStr, newLog.id!)
       .subscribe({
-        next: (response) => {
-          console.log('Båtlogg sparad till Google Sheets:', response);
-        },
-        error: (error) => {
-          console.error('Fel vid sparande till Google Sheets:', error);
-        },
+        next: () => console.log('Båtlogg START skickad'),
+        error: (e) => console.error('Fel vid båtlogg START:', e),
       });
   }
 
-  // Save day session header to Google Sheets when day starts
+  // --- Time log STOP ---
+  stopTimeLog(description: string): void {
+    const currentLog = this.currentLog$.value;
+    if (!currentLog) return;
+
+    currentLog.endTime = new Date();
+    currentLog.description = description;
+    currentLog.completed = true;
+
+    const logs = this.timeLogs$.value;
+    logs.push(currentLog);
+    this.timeLogs$.next(logs);
+
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.setItem('timeLogs', JSON.stringify(logs));
+    }
+
+    // Uppdatera samma rad i Sheets via logId i kolumn L
+    const endTimeStr = currentLog.endTime.toLocaleTimeString('sv-SE', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    this.googleSheetsService
+      .stopBoatLog(currentLog.id!, endTimeStr, currentLog.description || '')
+      .subscribe({
+        next: () => console.log('Båtlogg STOP skickad'),
+        error: (e) => console.error('Fel vid båtlogg STOP:', e),
+      });
+
+    // Rensa aktiv logg lokalt (så den inte återupptas)
+    this.currentLog$.next(null);
+    this.saveCurrentLog(null);
+  }
+
+  // --- Day session: header ---
   private saveDaySessionHeaderToSheets(dayStartTime: Date): void {
     const date = new Date().toISOString().split('T')[0];
     const dayStartTimeStr = dayStartTime.toLocaleTimeString('sv-SE', {
@@ -166,16 +154,12 @@ export class TimeLogService {
     this.googleSheetsService
       .saveDaySessionHeader(date, dayStartTimeStr)
       .subscribe({
-        next: (response) => {
-          console.log('Dagsession-header sparad till Google Sheets:', response);
-        },
-        error: (error) => {
-          console.error('Fel vid sparande av dagsession-header:', error);
-        },
+        next: () => console.log('Dagsession-header skickad'),
+        error: (e) => console.error('Fel vid dagsession-header:', e),
       });
   }
 
-  // Save day session to Google Sheets (update with end time)
+  // --- Day session: end time update ---
   saveDaySessionToSheets(): Observable<any> {
     const daySession = this.daySession$.value;
     if (!daySession || !daySession.dayEndTime) {
@@ -193,11 +177,6 @@ export class TimeLogService {
         minute: '2-digit',
       }) || '';
 
-    console.log('Sending to Google Sheets:');
-    console.log('  Date:', daySession.date);
-    console.log('  DayStartTime:', dayStartTimeStr);
-    console.log('  DayEndTime:', dayEndTimeStr);
-
     return new Observable((observer) => {
       this.googleSheetsService
         .updateDaySessionWithEndTime(
@@ -206,44 +185,63 @@ export class TimeLogService {
           dayEndTimeStr
         )
         .subscribe({
-          next: (response) => {
-            console.log('Dagsession uppdaterad med sluttid:', response);
-            // Rensa sessionen efter att den sparats
+          next: () => {
+            console.log('Dagsession uppdaterad med sluttid');
+
+            // Rekommendation: rensa bara vid lyckat svar
             this.daySession$.next(null);
             if (isPlatformBrowser(this.platformId)) {
               localStorage.removeItem('currentDaySession');
             }
-            observer.next(response);
+
+            observer.next(true);
             observer.complete();
           },
           error: (error) => {
             console.error('Fel vid sparande av dagsession:', error);
-            // Rensa även vid fel
-            this.daySession$.next(null);
-            if (isPlatformBrowser(this.platformId)) {
-              localStorage.removeItem('currentDaySession');
-            }
+            // OBS: behåll sessionen vid fel så användaren kan prova igen
             observer.error(error);
           },
         });
     });
   }
 
-  // Calculate duration in minutes
-  private calculateDuration(log: TimeLog): number {
-    if (log.endTime && log.startTime) {
-      return Math.round(
-        (log.endTime.getTime() - log.startTime.getTime()) / 60000
-      );
+  // --- Local storage: current log (NYTT) ---
+  private saveCurrentLog(log: TimeLog | null): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    if (log) {
+      localStorage.setItem('currentLog', JSON.stringify(log));
+    } else {
+      localStorage.removeItem('currentLog');
     }
-    return 0;
   }
 
-  // Load from local storage
-  private loadTimeLogs(): void {
-    if (!isPlatformBrowser(this.platformId)) {
-      return; // Hoppa över på servern
+  private loadCurrentLog(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    const stored = localStorage.getItem('currentLog');
+    if (!stored) return;
+
+    const raw = JSON.parse(stored);
+
+    const restored: TimeLog = {
+      ...raw,
+      startTime: new Date(raw.startTime),
+      endTime: raw.endTime ? new Date(raw.endTime) : undefined,
+    };
+
+    // Återuppta bara om den inte är "completed"
+    if (!restored.completed) {
+      this.currentLog$.next(restored);
+    } else {
+      localStorage.removeItem('currentLog');
     }
+  }
+
+  // --- Local storage: time logs ---
+  private loadTimeLogs(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
 
     const stored = localStorage.getItem('timeLogs');
     if (stored) {
@@ -256,26 +254,20 @@ export class TimeLogService {
     }
   }
 
-  // Load day session from storage
+  // --- Local storage: day session ---
   private loadDaySession(): void {
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
-    }
+    if (!isPlatformBrowser(this.platformId)) return;
 
     const stored = localStorage.getItem('currentDaySession');
     if (stored) {
       const session = JSON.parse(stored);
       session.dayStartTime = new Date(session.dayStartTime);
-      if (session.dayEndTime) {
-        session.dayEndTime = new Date(session.dayEndTime);
-      }
+      if (session.dayEndTime) session.dayEndTime = new Date(session.dayEndTime);
 
-      // Kontrollera om det är samma dag
       const today = new Date().toISOString().split('T')[0];
       if (session.date === today) {
         this.daySession$.next(session);
       } else {
-        // Andra dag - radera gammal session
         localStorage.removeItem('currentDaySession');
       }
     }

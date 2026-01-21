@@ -52,13 +52,11 @@ export class GoogleSheetsService {
         if (idx >= 0) this.pendingImgs.splice(idx, 1);
       };
 
-      // Vi ignorerar onload/onerror – målet är bara att skicka requesten
       img.onload = cleanup;
       img.onerror = cleanup;
 
       img.src = fullUrl;
 
-      // Extra säkerhet: städa efter 10s även om inget event triggas
       setTimeout(cleanup, 10_000);
 
       observer.next();
@@ -66,6 +64,7 @@ export class GoogleSheetsService {
     });
   }
 
+  // --- DAY SESSION ---
   saveDaySessionHeader(date: string, dayStartTime: string): Observable<void> {
     return this.sendGet({
       type: 'daySessionHeader',
@@ -88,6 +87,7 @@ export class GoogleSheetsService {
     });
   }
 
+  // --- BOAT LOG (LEGACY: append on stop) ---
   saveBoatLogToSheets(
     boat: string,
     startTime: string,
@@ -98,6 +98,33 @@ export class GoogleSheetsService {
       type: 'boatLog',
       boat,
       startTime,
+      endTime,
+      description,
+    });
+  }
+
+  // --- BOAT LOG (RECOMMENDED: start + stop update via logId in column L) ---
+  startBoatLog(
+    boat: string,
+    startTime: string,
+    logId: string
+  ): Observable<void> {
+    return this.sendGet({
+      type: 'boatLogStart',
+      boat,
+      startTime,
+      logId,
+    });
+  }
+
+  stopBoatLog(
+    logId: string,
+    endTime: string,
+    description: string
+  ): Observable<void> {
+    return this.sendGet({
+      type: 'boatLogStop',
+      logId,
       endTime,
       description,
     });
