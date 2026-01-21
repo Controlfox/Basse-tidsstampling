@@ -66,8 +66,9 @@ export class AppComponent implements OnInit, OnDestroy {
       this.isLogging = !!log;
 
       if (log) {
-        // <-- viktigt: synka dropdownen med aktiv logg även efter reload
+        // Synka dropdown + återställ beskrivning efter reload
         this.selectedBoat = log.boat;
+        this.workDescription = log.description || ''; // <-- NYTT
 
         this.startTimer(log);
       } else {
@@ -90,16 +91,20 @@ export class AppComponent implements OnInit, OnDestroy {
   stopLogging(): void {
     if (this.workDescription.trim()) {
       this.timeLogService.stopTimeLog(this.workDescription);
-      // rensning sker i subscription när currentLog blir null
     } else {
       alert('Vänligen ange en kort beskrivning av arbetet');
     }
   }
 
+  // <-- NYTT: körs när man skriver i textarea (sparar utkast i localStorage via service)
+  onWorkDescriptionChange(value: string): void {
+    this.workDescription = value;
+    this.timeLogService.setCurrentDescriptionDraft(value);
+  }
+
   private startTimer(log: TimeLog): void {
     if (this.timerInterval) clearInterval(this.timerInterval);
 
-    // robust om startTime råkar vara string någonstans
     const start = new Date(log.startTime).getTime();
 
     this.timerInterval = setInterval(() => {
