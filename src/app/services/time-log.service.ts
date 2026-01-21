@@ -5,11 +5,11 @@ import { HttpClient } from '@angular/common/http';
 import { GoogleSheetsService } from './google-sheets.service';
 
 export interface TimeLog {
-  id?: string;
+  id?: string; // logId (kolumn L)
   boat: string;
   startTime: Date;
   endTime?: Date;
-  description?: string; // <-- används även som "utkast"
+  description?: string;
   completed: boolean;
 }
 
@@ -33,7 +33,7 @@ export class TimeLogService {
   ) {
     this.loadTimeLogs();
     this.loadDaySession();
-    this.loadCurrentLog(); // <-- återuppta aktiv logg efter reload/mobil
+    this.loadCurrentLog();
   }
 
   getTimeLogs(): Observable<TimeLog[]> {
@@ -46,16 +46,6 @@ export class TimeLogService {
 
   getDaySession(): Observable<DaySession | null> {
     return this.daySession$.asObservable();
-  }
-
-  // NYTT: spara "utkast" av beskrivningen under pågående logg (överlever reload)
-  setCurrentDescriptionDraft(description: string): void {
-    const current = this.currentLog$.value;
-    if (!current) return;
-
-    current.description = description;
-    this.currentLog$.next({ ...current });
-    this.saveCurrentLog(current);
   }
 
   // --- Day session ---
@@ -95,17 +85,16 @@ export class TimeLogService {
   // --- Time log START ---
   startTimeLog(boat: string): void {
     const newLog: TimeLog = {
-      id: Date.now().toString(), // logId
+      id: Date.now().toString(),
       boat,
       startTime: new Date(),
-      description: '', // <-- viktigt: tomt utkast från start
       completed: false,
+      description: '', // viktigt så vi kan spara draft
     };
 
     this.currentLog$.next(newLog);
     this.saveCurrentLog(newLog);
 
-    // Skriv START direkt till Sheets så sessionen finns även om mobilen stänger sidan
     const startTimeStr = newLog.startTime.toLocaleTimeString('sv-SE', {
       hour: '2-digit',
       minute: '2-digit',
@@ -119,7 +108,7 @@ export class TimeLogService {
       });
   }
 
-  // --- Time log STOP ---
+  // --- Time log STOP (normal stop via knapp) ---
   stopTimeLog(description: string): void {
     const currentLog = this.currentLog$.value;
     if (!currentLog) return;
@@ -136,7 +125,6 @@ export class TimeLogService {
       localStorage.setItem('timeLogs', JSON.stringify(logs));
     }
 
-    // Uppdatera samma rad i Sheets via logId i kolumn L
     const endTimeStr = currentLog.endTime.toLocaleTimeString('sv-SE', {
       hour: '2-digit',
       minute: '2-digit',
@@ -149,9 +137,124 @@ export class TimeLogService {
         error: (e) => console.error('Fel vid båtlogg STOP:', e),
       });
 
-    // Rensa aktiv logg lokalt (så den inte återupptas)
     this.currentLog$.next(null);
     this.saveCurrentLog(null);
+  }
+
+  // --- NEW: Update description draft continuously (saved on reload) ---
+  updateCurrentDescriptionDraft(description: string): void {
+    const currentLog = this.currentLog$.value;
+    if (!currentLog) return;
+
+    currentLog.description = description;
+    this.currentLog$.next({ ...currentLog });
+    this.saveCurrentLog(currentLog);
+  }
+
+  // --- NEW: Edit boat times
+  // If endTime is provided => stop immediately (requires description)
+  editActiveBoatTimes(startHHmm: string, endHHmm: string): Observable<void> {
+    const currentLog = this.currentLog$.value;
+    if (!currentLog || !currentLog.id) {
+      return new Observable((obs) => {
+        obs.complete();
+      });
+    }
+
+    const dateBase = new Date(currentLog.startTime);
+
+    // Build new start Date from HH:mm
+    const [sh, sm] = startHHmm.split(':').map(Number);
+    const newStart = new Date(dateBase);
+    newStart.setHours(sh, sm, 0, 0);
+
+    // If endHHmm is set, build end Date (same day or next if earlier than start)
+    let newEnd: Date | undefined = undefined;
+    if (endHHmm && endHHmm.trim()) {
+      const [eh, em] = endHHmm.split(':').map(Number);
+      newEnd = new Date(dateBase);
+      newEnd.setHours(eh, em, 0, 0);
+
+      // Support over-midnight end time
+      if (newEnd.getTime() < newStart.getTime()) {
+        newEnd.setDate(newEnd.getDate() + 1);
+      }
+    }
+
+    // Update Google Sheet first (start always, end can be blank)
+    const startStr = startHHmm;
+    const endStr = newEnd ? endHHmm : ''; // blank => ongoing
+
+    return new Observable<void>((observer) => {
+      this.googleSheetsService
+        .updateBoatLogTimes(currentLog.id!, startStr, endStr)
+        .subscribe({
+          next: () => {
+            // Update local current log
+            currentLog.startTime = newStart;
+            currentLog.endTime = newEnd;
+
+            // If end time chosen => stop immediately and write description too
+            if (newEnd) {
+              const desc = (currentLog.description || '').trim();
+              if (!desc) {
+                // if no description, revert local endTime (keep ongoing)
+                currentLog.endTime = undefined;
+                this.currentLog$.next({ ...currentLog });
+                this.saveCurrentLog(currentLog);
+
+                observer.error('Missing description');
+                return;
+              }
+
+              currentLog.completed = true;
+
+              // Add to local history
+              const logs = this.timeLogs$.value;
+              logs.push({ ...currentLog });
+              this.timeLogs$.next(logs);
+
+              if (isPlatformBrowser(this.platformId)) {
+                localStorage.setItem('timeLogs', JSON.stringify(logs));
+              }
+
+              // Ensure Sheets end+description are set via STOP endpoint (does not change start)
+              this.googleSheetsService
+                .stopBoatLog(currentLog.id!, endHHmm, desc)
+                .subscribe({
+                  next: () => {
+                    // Clear active log
+                    this.currentLog$.next(null);
+                    this.saveCurrentLog(null);
+
+                    observer.next();
+                    observer.complete();
+                  },
+                  error: (e) => {
+                    console.error('Fel vid STOP efter tid-ändring:', e);
+                    // Keep log active locally if stop failed
+                    currentLog.completed = false;
+                    currentLog.endTime = undefined;
+                    this.currentLog$.next({ ...currentLog });
+                    this.saveCurrentLog(currentLog);
+
+                    observer.error(e);
+                  },
+                });
+
+              return;
+            }
+
+            // No end time => keep ongoing
+            this.currentLog$.next({ ...currentLog });
+            this.saveCurrentLog(currentLog);
+
+            observer.next();
+            observer.complete();
+          },
+          error: (e) => observer.error(e),
+        });
+    });
   }
 
   // --- Day session: header ---
@@ -197,13 +300,10 @@ export class TimeLogService {
         )
         .subscribe({
           next: () => {
-            console.log('Dagsession uppdaterad med sluttid');
-
             this.daySession$.next(null);
             if (isPlatformBrowser(this.platformId)) {
               localStorage.removeItem('currentDaySession');
             }
-
             observer.next(true);
             observer.complete();
           },
