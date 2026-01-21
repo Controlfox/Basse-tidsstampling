@@ -2,11 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import {
-  TimeLogService,
-  TimeLog,
-  DaySession,
-} from './services/time-log.service';
+import { TimeLogService, TimeLog, DaySession } from './services/time-log.service';
 import { Observable, Subscription } from 'rxjs';
 
 @Component({
@@ -47,6 +43,12 @@ export class AppComponent implements OnInit, OnDestroy {
 
   showDayStartModal: boolean = false;
   showDayEndModal: boolean = false;
+
+  // Modal för att ändra tider på aktiv logg
+  showEditBoatTimesModal: boolean = false;
+  selectedBoatStartTime: string = '08:00';
+  selectedBoatEndTime: string = ''; // tom = pågår
+
   selectedDayStartTime: string = '08:00';
   selectedDayEndTime: string = '17:00';
   timeSlots: string[] = [];
@@ -66,15 +68,20 @@ export class AppComponent implements OnInit, OnDestroy {
       this.isLogging = !!log;
 
       if (log) {
-        // Synka dropdown + återställ beskrivning efter reload
+        // synka UI med aktiv logg även efter reload
         this.selectedBoat = log.boat;
-        this.workDescription = log.description || ''; // <-- NYTT
+        this.workDescription = log.description || '';
+
+        // förifyll edit-modalens tider från loggen
+        this.selectedBoatStartTime = this.formatHHmm(new Date(log.startTime));
+        this.selectedBoatEndTime = log.endTime ? this.formatHHmm(new Date(log.endTime)) : '';
 
         this.startTimer(log);
       } else {
         this.stopTimer();
         this.selectedBoat = '';
         this.workDescription = '';
+        this.selectedBoatEndTime = '';
       }
     });
 
@@ -96,33 +103,45 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  // <-- NYTT: körs när man skriver i textarea (sparar utkast i localStorage via service)
+  // Spara beskrivning som utkast (överlever reload)
   onWorkDescriptionChange(value: string): void {
     this.workDescription = value;
-    this.timeLogService.setCurrentDescriptionDraft(value);
+    this.timeLogService.updateCurrentDescriptionDraft(value);
   }
 
-  private startTimer(log: TimeLog): void {
-    if (this.timerInterval) clearInterval(this.timerInterval);
+  // Öppna modal och sätt values från nuvarande logg
+  openEditBoatTimes(log: TimeLog | null): void {
+    if (!log) return;
 
-    const start = new Date(log.startTime).getTime();
-
-    this.timerInterval = setInterval(() => {
-      const elapsed = Date.now() - start;
-      this.elapsedTime = this.formatTime(elapsed);
-    }, 1000);
+    this.selectedBoatStartTime = this.formatHHmm(new Date(log.startTime));
+    this.selectedBoatEndTime = log.endTime ? this.formatHHmm(new Date(log.endTime)) : '';
+    this.showEditBoatTimesModal = true;
   }
 
-  private generateTimeSlots(): void {
-    this.timeSlots = [];
-    for (let hour = 0; hour < 24; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
-        const timeString = `${String(hour).padStart(2, '0')}:${String(
-          minute
-        ).padStart(2, '0')}`;
-        this.timeSlots.push(timeString);
-      }
+  // Spara tider:
+  // - Om sluttid är satt => stoppa momentet direkt (kräver beskrivning)
+  // - Om sluttid är tom => uppdatera bara starttiden och fortsätt
+  saveBoatTimes(): void {
+    if (this.selectedBoatEndTime && !this.workDescription.trim()) {
+      alert('Du måste skriva en beskrivning innan du kan sätta en sluttid.');
+      return;
     }
+
+    this.timeLogService
+      .editActiveBoatTimes(this.selectedBoatStartTime, this.selectedBoatEndTime)
+      .subscribe({
+        next: () => {
+          this.showEditBoatTimesModal = false;
+        },
+        error: (e) => {
+          if (e === 'Missing description') {
+            alert('Du måste skriva en beskrivning innan du kan sätta en sluttid.');
+            return;
+          }
+          console.error('Fel vid ändring av tider:', e);
+          alert('Kunde inte spara tiderna. Prova igen.');
+        },
+      });
   }
 
   startDaySession(): void {
@@ -153,11 +172,34 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
+  private startTimer(log: TimeLog): void {
+    if (this.timerInterval) clearInterval(this.timerInterval);
+
+    // robust om startTime råkar vara string någonstans
+    const start = new Date(log.startTime).getTime();
+
+    this.timerInterval = setInterval(() => {
+      const elapsed = Date.now() - start;
+      this.elapsedTime = this.formatTime(elapsed);
+    }, 1000);
+  }
+
   private stopTimer(): void {
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
       this.timerInterval = null;
       this.elapsedTime = '00:00:00';
+    }
+  }
+
+  private generateTimeSlots(): void {
+    this.timeSlots = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        this.timeSlots.push(
+          `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+        );
+      }
     }
   }
 
@@ -171,6 +213,10 @@ export class AppComponent implements OnInit, OnDestroy {
       2,
       '0'
     )}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  private formatHHmm(d: Date): string {
+    return d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
   }
 
   ngOnDestroy(): void {
