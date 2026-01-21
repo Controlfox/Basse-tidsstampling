@@ -9,7 +9,7 @@ export interface TimeLog {
   boat: string;
   startTime: Date;
   endTime?: Date;
-  description?: string;
+  description?: string; // <-- används även som "utkast"
   completed: boolean;
 }
 
@@ -33,7 +33,7 @@ export class TimeLogService {
   ) {
     this.loadTimeLogs();
     this.loadDaySession();
-    this.loadCurrentLog(); // <-- NYTT: återuppta aktiv logg efter reload/mobil
+    this.loadCurrentLog(); // <-- återuppta aktiv logg efter reload/mobil
   }
 
   getTimeLogs(): Observable<TimeLog[]> {
@@ -46,6 +46,16 @@ export class TimeLogService {
 
   getDaySession(): Observable<DaySession | null> {
     return this.daySession$.asObservable();
+  }
+
+  // NYTT: spara "utkast" av beskrivningen under pågående logg (överlever reload)
+  setCurrentDescriptionDraft(description: string): void {
+    const current = this.currentLog$.value;
+    if (!current) return;
+
+    current.description = description;
+    this.currentLog$.next({ ...current });
+    this.saveCurrentLog(current);
   }
 
   // --- Day session ---
@@ -88,6 +98,7 @@ export class TimeLogService {
       id: Date.now().toString(), // logId
       boat,
       startTime: new Date(),
+      description: '', // <-- viktigt: tomt utkast från start
       completed: false,
     };
 
@@ -188,7 +199,6 @@ export class TimeLogService {
           next: () => {
             console.log('Dagsession uppdaterad med sluttid');
 
-            // Rekommendation: rensa bara vid lyckat svar
             this.daySession$.next(null);
             if (isPlatformBrowser(this.platformId)) {
               localStorage.removeItem('currentDaySession');
@@ -199,14 +209,13 @@ export class TimeLogService {
           },
           error: (error) => {
             console.error('Fel vid sparande av dagsession:', error);
-            // OBS: behåll sessionen vid fel så användaren kan prova igen
             observer.error(error);
           },
         });
     });
   }
 
-  // --- Local storage: current log (NYTT) ---
+  // --- Local storage: current log ---
   private saveCurrentLog(log: TimeLog | null): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
@@ -231,7 +240,6 @@ export class TimeLogService {
       endTime: raw.endTime ? new Date(raw.endTime) : undefined,
     };
 
-    // Återuppta bara om den inte är "completed"
     if (!restored.completed) {
       this.currentLog$.next(restored);
     } else {
