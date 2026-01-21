@@ -25,16 +25,14 @@ export class GoogleSheetsService {
       const fullUrl = url.toString();
       console.log('[Sheets beacon url]', fullUrl);
 
-      // 1) Försök med fetch no-cors (skickar utan preflight, vi bryr oss inte om svaret)
+      // 1) fetch no-cors (ingen preflight, vi bryr oss inte om svaret)
       if (typeof fetch !== 'undefined') {
         fetch(fullUrl, {
           method: 'GET',
           mode: 'no-cors',
           keepalive: true,
         })
-          .catch(() => {
-            // Ignorera – vi kan inte läsa svar ändå
-          })
+          .catch(() => {})
           .finally(() => {
             observer.next();
             observer.complete();
@@ -43,7 +41,7 @@ export class GoogleSheetsService {
         return;
       }
 
-      // 2) Fallback: Image, men vi MÅSTE hålla kvar referensen en stund
+      // 2) Fallback: Image (håll kvar referens)
       const img = new Image();
       this.pendingImgs.push(img);
 
@@ -87,23 +85,7 @@ export class GoogleSheetsService {
     });
   }
 
-  // --- BOAT LOG (LEGACY: append on stop) ---
-  saveBoatLogToSheets(
-    boat: string,
-    startTime: string,
-    endTime: string,
-    description: string
-  ): Observable<void> {
-    return this.sendGet({
-      type: 'boatLog',
-      boat,
-      startTime,
-      endTime,
-      description,
-    });
-  }
-
-  // --- BOAT LOG (RECOMMENDED: start + stop update via logId in column L) ---
+  // --- BOAT LOG (start + stop update via logId in column L) ---
   startBoatLog(
     boat: string,
     startTime: string,
@@ -127,6 +109,20 @@ export class GoogleSheetsService {
       logId,
       endTime,
       description,
+    });
+  }
+
+  // --- NEW: Update times for an existing log row ---
+  updateBoatLogTimes(
+    logId: string,
+    startTime: string,
+    endTime: string
+  ): Observable<void> {
+    return this.sendGet({
+      type: 'boatLogUpdateTimes',
+      logId,
+      startTime, // D
+      endTime, // E ('' = pågår)
     });
   }
 }
