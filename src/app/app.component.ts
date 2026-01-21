@@ -34,15 +34,17 @@ export class AppComponent implements OnInit, OnDestroy {
     'Terminalen',
     'Lastbilar',
   ];
+
   selectedBoat: string = '';
   workDescription: string = '';
+
   timeLogs$: Observable<TimeLog[]>;
   currentLog$: Observable<TimeLog | null>;
   daySession$: Observable<DaySession | null>;
+
   isLogging: boolean = false;
   elapsedTime: string = '00:00:00';
 
-  // Day session properties
   showDayStartModal: boolean = false;
   showDayEndModal: boolean = false;
   selectedDayStartTime: string = '08:00';
@@ -62,10 +64,16 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     const sub = this.currentLog$.subscribe((log) => {
       this.isLogging = !!log;
+
       if (log) {
+        // <-- viktigt: synka dropdownen med aktiv logg även efter reload
+        this.selectedBoat = log.boat;
+
         this.startTimer(log);
       } else {
         this.stopTimer();
+        this.selectedBoat = '';
+        this.workDescription = '';
       }
     });
 
@@ -82,8 +90,7 @@ export class AppComponent implements OnInit, OnDestroy {
   stopLogging(): void {
     if (this.workDescription.trim()) {
       this.timeLogService.stopTimeLog(this.workDescription);
-      this.selectedBoat = '';
-      this.workDescription = '';
+      // rensning sker i subscription när currentLog blir null
     } else {
       alert('Vänligen ange en kort beskrivning av arbetet');
     }
@@ -91,15 +98,16 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private startTimer(log: TimeLog): void {
     if (this.timerInterval) clearInterval(this.timerInterval);
+
+    // robust om startTime råkar vara string någonstans
+    const start = new Date(log.startTime).getTime();
+
     this.timerInterval = setInterval(() => {
-      const now = new Date().getTime();
-      const start = log.startTime.getTime();
-      const elapsed = now - start;
+      const elapsed = Date.now() - start;
       this.elapsedTime = this.formatTime(elapsed);
     }, 1000);
   }
 
-  // Generate time slots in 15-minute intervals
   private generateTimeSlots(): void {
     this.timeSlots = [];
     for (let hour = 0; hour < 24; hour++) {
@@ -112,7 +120,6 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Start day session
   startDaySession(): void {
     const [hours, minutes] = this.selectedDayStartTime.split(':').map(Number);
     const dayStart = new Date();
@@ -122,7 +129,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.showDayStartModal = false;
   }
 
-  // End day session
   endDaySession(): void {
     const [hours, minutes] = this.selectedDayEndTime.split(':').map(Number);
     const dayEnd = new Date();
@@ -130,7 +136,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.timeLogService.endDaySession(dayEnd);
 
-    // Spara dagsession till Google Sheets
     this.timeLogService.saveDaySessionToSheets().subscribe({
       next: () => {
         console.log('Dagsession sparad');
@@ -156,6 +161,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
+
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
       2,
       '0'
