@@ -2,7 +2,11 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TimeLogService, TimeLog, DaySession } from './services/time-log.service';
+import {
+  TimeLogService,
+  TimeLog,
+  DaySession,
+} from './services/time-log.service';
 import { Observable, Subscription } from 'rxjs';
 
 @Component({
@@ -46,12 +50,16 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // Modal för att ändra tider på aktiv logg
   showEditBoatTimesModal: boolean = false;
-  selectedBoatStartTime: string = '08:00';
+
+  selectedBoatStartTime: string = '00:00';
   selectedBoatEndTime: string = ''; // tom = pågår
 
-  selectedDayStartTime: string = '08:00';
-  selectedDayEndTime: string = '17:00';
+  selectedDayStartTime: string = '00:00';
+  selectedDayEndTime: string = '00:00';
   timeSlots: string[] = [];
+
+  // ✅ NYTT: lunch-status (för lila default + bekräftelse)
+  lunchTaken: boolean = false;
 
   private timerInterval: any;
   private subscriptions = new Subscription();
@@ -61,6 +69,18 @@ export class AppComponent implements OnInit, OnDestroy {
     this.currentLog$ = this.timeLogService.getCurrentLog();
     this.daySession$ = this.timeLogService.getDaySession();
     this.generateTimeSlots();
+
+    const nextQ = this.getNextQuarterHHmm(new Date());
+    this.selectedDayStartTime = nextQ;
+    this.selectedDayEndTime = nextQ;
+    this.selectedBoatStartTime = nextQ;
+    this.selectedBoatEndTime = '';
+
+    // ✅ Lunch-status kan ligga kvar vid reload (valfritt men brukar vara önskat)
+    try {
+      const stored = localStorage.getItem('lunchTaken');
+      this.lunchTaken = stored === 'true';
+    } catch (_) {}
   }
 
   ngOnInit(): void {
@@ -68,19 +88,23 @@ export class AppComponent implements OnInit, OnDestroy {
       this.isLogging = !!log;
 
       if (log) {
-        // synka UI med aktiv logg även efter reload
         this.selectedBoat = log.boat;
         this.workDescription = log.description || '';
 
-        // förifyll edit-modalens tider från loggen
+        // (dessa values används om du öppnar edit och vill ha loggens tider)
         this.selectedBoatStartTime = this.formatHHmm(new Date(log.startTime));
-        this.selectedBoatEndTime = log.endTime ? this.formatHHmm(new Date(log.endTime)) : '';
+        this.selectedBoatEndTime = log.endTime
+          ? this.formatHHmm(new Date(log.endTime))
+          : '';
 
         this.startTimer(log);
       } else {
         this.stopTimer();
         this.selectedBoat = '';
         this.workDescription = '';
+
+        const nextQ = this.getNextQuarterHHmm(new Date());
+        this.selectedBoatStartTime = nextQ;
         this.selectedBoatEndTime = '';
       }
     });
@@ -103,30 +127,37 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Spara beskrivning som utkast (överlever reload)
   onWorkDescriptionChange(value: string): void {
     this.workDescription = value;
     this.timeLogService.updateCurrentDescriptionDraft(value);
   }
 
-  // Öppna modal och sätt values från nuvarande logg
+  // ✅ Öppna “Ändra tider”:
+  // - starttid: loggens starttid om den finns, annars närmsta kvart
+  // - sluttid: om loggens endTime finns => visa den, annars default = närmsta kvart (men valfritt)
   openEditBoatTimes(log: TimeLog | null): void {
-    if (!log) return;
+    const nextQ = this.getNextQuarterHHmm(new Date());
 
-    this.selectedBoatStartTime = this.formatHHmm(new Date(log.startTime));
-    this.selectedBoatEndTime = log.endTime ? this.formatHHmm(new Date(log.endTime)) : '';
+    if (log) {
+      // start: loggens start
+      this.selectedBoatStartTime = log.startTime
+        ? this.formatHHmm(new Date(log.startTime))
+        : nextQ;
+
+      // end: om loggen har endTime => visa den, annars förifyll med närmsta kvart
+      // (om du hellre vill ha tom som default, byt nextQ till '')
+      this.selectedBoatEndTime = log.endTime
+        ? this.formatHHmm(new Date(log.endTime))
+        : nextQ;
+    } else {
+      this.selectedBoatStartTime = nextQ;
+      this.selectedBoatEndTime = nextQ;
+    }
+
     this.showEditBoatTimesModal = true;
   }
 
-  // Spara tider:
-  // - Om sluttid är satt => stoppa momentet direkt (kräver beskrivning)
-  // - Om sluttid är tom => uppdatera bara starttiden och fortsätt
   saveBoatTimes(): void {
-    if (this.selectedBoatEndTime && !this.workDescription.trim()) {
-      alert('Du måste skriva en beskrivning innan du kan sätta en sluttid.');
-      return;
-    }
-
     this.timeLogService
       .editActiveBoatTimes(this.selectedBoatStartTime, this.selectedBoatEndTime)
       .subscribe({
@@ -134,17 +165,26 @@ export class AppComponent implements OnInit, OnDestroy {
           this.showEditBoatTimesModal = false;
         },
         error: (e) => {
-          if (e === 'Missing description') {
-            alert('Du måste skriva en beskrivning innan du kan sätta en sluttid.');
-            return;
-          }
           console.error('Fel vid ändring av tider:', e);
           alert('Kunde inte spara tiderna. Prova igen.');
         },
       });
   }
 
+  // används av HTML istället för showDayStartModal = true
+  openDayStartModal(): void {
+    this.selectedDayStartTime = this.getNextQuarterHHmm(new Date());
+    this.showDayStartModal = true;
+  }
+
+  // används av HTML istället för showDayEndModal = true
+  openDayEndModal(): void {
+    this.selectedDayEndTime = this.getNextQuarterHHmm(new Date());
+    this.showDayEndModal = true;
+  }
+
   startDaySession(): void {
+    this.lunchTaken = false;
     const [hours, minutes] = this.selectedDayStartTime.split(':').map(Number);
     const dayStart = new Date();
     dayStart.setHours(hours, minutes, 0, 0);
@@ -172,10 +212,27 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ✅ Lunch-knapp:
+  // - före klick: dov lila
+  // - efter klick: spara lunch, visa bekräftelse + knappen blir "som nu"
+  addLunch(): void {
+    if (this.isLogging) {
+      alert('Stoppa aktivt moment innan du loggar lunch.');
+      return;
+    }
+    if (this.lunchTaken) return;
+
+    this.timeLogService.addLunchBreak();
+
+    this.lunchTaken = true;
+    try {
+      localStorage.setItem('lunchTaken', 'true');
+    } catch (_) {}
+  }
+
   private startTimer(log: TimeLog): void {
     if (this.timerInterval) clearInterval(this.timerInterval);
 
-    // robust om startTime råkar vara string någonstans
     const start = new Date(log.startTime).getTime();
 
     this.timerInterval = setInterval(() => {
@@ -197,7 +254,7 @@ export class AppComponent implements OnInit, OnDestroy {
     for (let hour = 0; hour < 24; hour++) {
       for (let minute = 0; minute < 60; minute += 15) {
         this.timeSlots.push(
-          `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+          `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
         );
       }
     }
@@ -211,12 +268,33 @@ export class AppComponent implements OnInit, OnDestroy {
 
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
       2,
-      '0'
+      '0',
     )}:${String(seconds).padStart(2, '0')}`;
   }
 
   private formatHHmm(d: Date): string {
-    return d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleTimeString('sv-SE', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  // närmsta kvart FRAMÅT (ceil)
+  private getNextQuarterHHmm(date: Date): string {
+    const d = new Date(date);
+    d.setSeconds(0, 0);
+
+    const m = d.getMinutes();
+    const next = Math.ceil(m / 15) * 15;
+
+    if (next === 60) {
+      d.setHours(d.getHours() + 1);
+      d.setMinutes(0);
+    } else {
+      d.setMinutes(next);
+    }
+
+    return this.formatHHmm(d);
   }
 
   ngOnDestroy(): void {
