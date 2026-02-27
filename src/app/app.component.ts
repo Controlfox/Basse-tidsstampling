@@ -33,6 +33,7 @@ export class AppComponent implements OnInit, OnDestroy {
     'M/S KÄRRAN',
     'Terminalen',
     'Lastbilar',
+    'Stavsnäs',
   ];
 
   selectedBoat: string = '';
