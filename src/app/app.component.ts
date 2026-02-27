@@ -34,6 +34,7 @@ export class AppComponent implements OnInit, OnDestroy {
     'Terminalen',
     'Lastbilar',
     'Stavsnäs',
+    'Administration',
   ];
 
   selectedBoat: string = '';
