@@ -323,13 +323,13 @@
 /* Cheeky in-joke tagline i handskrift — låter Amatic-charmen leva
    kvar men nedtonad så den inte stör typografi-hierarkin. */
 .theme-summer .theme-wave-text {
-  font-family: "Amatic SC", cursive !important;
-  font-size: 22px !important;
+  font-family: "Caveat", cursive !important;
+  font-size: 26px !important;
   font-weight: 700 !important;
-  letter-spacing: 1.5px !important;
+  letter-spacing: 0.5px !important;
   fill: var(--ink) !important;
   stroke: none !important;
-  opacity: 0.75 !important;
+  opacity: 0.8 !important;
 }
 
 /* ---------- 5. Surface overrides (kort/paneler) ---------- */
