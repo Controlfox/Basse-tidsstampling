@@ -63,6 +63,10 @@ export class AppComponent implements OnInit, OnDestroy {
   // ✅ NYTT: lunch-status (för lila default + bekräftelse)
   lunchTaken: boolean = false;
 
+  // Tema: 'original' (mörkt natt-tema) eller 'summer' (ljust sommar-tema).
+  // Ändra här i koden för att byta tema — det finns ingen UI-toggle.
+  currentTheme: 'original' | 'summer' = 'summer';
+
   private timerInterval: any;
   private subscriptions = new Subscription();
 

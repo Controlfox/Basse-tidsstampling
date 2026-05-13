@@ -1,3 +1,633 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================================
+   SUMMER-TEMA — "Sun-bleached Coastal Editorial"
+   Konceptet: en stigande terracotta-sol mot kritig sand, satta i
+   editorial-typografi (Fraunces italic + Manrope). Frångår
+   bokstavliga skogsillustrationer — istället en abstrakt,
+   midcentury-doftande grafisk komposition som klär en svensk
+   sommardag på sjön. !important behövs för att slå Tailwinds
+   utility-klasser i HTML:n; alla overrides är hängda under
+   `.theme-summer` så originaltemat orörd kvar.
+   ============================================================ */
+
+/* ---------- 1. Palett ---------- */
+.theme-summer {
+  --cream: #f5efe2;
+  --cream-warm: #efe5ce;
+  --sand: #e8d2a5;
+  --sand-deep: #d6bc85;
+  --terracotta: #c04b1e;
+  --terra-soft: #d77047;
+  --cobalt: #3d617a;
+  --cobalt-deep: #243f54;
+  --sage: #8fa88b;
+  --rose: #e5a892;
+  --ink: #1e2a35;
+  --ink-soft: #4a5867;
+  --ink-mute: #6e7c8b;
+}
+
+/* ---------- 2. Typografi ---------- */
+.theme-summer {
+  font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+}
+
+.theme-summer .theme-title {
+  font-family: "Fraunces", ui-serif, Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 400 !important;
+  font-size: 2.5rem !important;
+  line-height: 0.98 !important;
+  letter-spacing: -0.025em !important;
+  color: var(--ink) !important;
+  font-variation-settings: "opsz" 144, "SOFT" 80;
+  animation: summer-title-in 0.9s ease-out 0.1s both;
+}
+
+.theme-summer .theme-eyebrow {
+  font-family: "Manrope", sans-serif !important;
+  font-size: 0.65rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.32em !important;
+  text-transform: uppercase !important;
+  color: var(--cobalt) !important;
+  animation: summer-title-in 0.9s ease-out 0s both;
+}
+
+@keyframes summer-title-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- 3. Shell + frame ---------- */
+
+/* Shell — djupare sand pulled from headerns palett. Radial-glow:er
+   ger atmosfäriska temperaturzoner: peach uppe, terracotta uppe-höger,
+   cobalt och sage i botten. Linear-gradienten skiftar genom fem
+   sand-toner med subtila hue-justeringar (peach → ren sand → umber). */
+.theme-shell.theme-summer {
+  background-image: radial-gradient(
+      1100px circle at 12% 6%,
+      rgba(241, 174, 110, 0.22),
+      transparent 52%
+    ),
+    radial-gradient(
+      1000px circle at 92% 10%,
+      rgba(192, 75, 30, 0.16),
+      transparent 55%
+    ),
+    radial-gradient(
+      900px circle at 88% 92%,
+      rgba(61, 97, 122, 0.16),
+      transparent 60%
+    ),
+    radial-gradient(
+      800px circle at 35% 100%,
+      rgba(143, 168, 139, 0.12),
+      transparent 60%
+    ),
+    linear-gradient(
+      168deg,
+      #ddc190 0%,
+      #d0b07c 28%,
+      #be9a64 58%,
+      #a78250 82%,
+      #8e6c3c 100%
+    ) !important;
+}
+
+/* Dölj de mörka blob-glow-elementen — vi har en egen sol istället. */
+.theme-summer .theme-blob-1,
+.theme-summer .theme-blob-2,
+.theme-summer .theme-blob-3,
+.theme-summer .theme-blob-4,
+.theme-summer .theme-blob-5 {
+  display: none !important;
+}
+
+/* Frame — sitter mellan shell och cards i ljustyngd. Använder
+   headerns ljusare sandtoner men inte fullt så ljusa som korten.
+   Tre lager: warm radial-highlight uppe-vänster + umber-vignett
+   nere-höger + multi-stop sand-gradient med peach→umber-skift. */
+.theme-summer .theme-frame {
+  background-image: radial-gradient(
+      circle at 18% 8%,
+      rgba(255, 240, 210, 0.5),
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 88% 95%,
+      rgba(140, 95, 50, 0.22),
+      transparent 45%
+    ),
+    linear-gradient(
+      180deg,
+      #f0d8a8 0%,
+      #ecd09c 25%,
+      #e6c790 55%,
+      #ddb87a 85%,
+      #d2a868 100%
+    ) !important;
+  --tw-ring-color: rgba(160, 105, 55, 0.32);
+  box-shadow:
+    0 30px 80px -30px rgba(60, 42, 22, 0.55),
+    0 16px 40px -20px rgba(165, 105, 55, 0.22),
+    0 4px 12px -6px rgba(60, 42, 22, 0.18),
+    0 1px 0 rgba(255, 245, 215, 0.55) inset,
+    0 -1px 0 rgba(120, 80, 40, 0.22) inset !important;
+}
+
+/* ---------- 4. Wave header ---------- */
+
+/* Sand-gradient som himmel — kombo av directional warmth från solen
+   (radial top-right) + en horisont-glöd-band (linear horisontellt) +
+   bas-gradient (linear vertikalt). Tre lager ger atmosfär istället
+   för platt färg. */
+.theme-summer .theme-wave-bg {
+  background-image: radial-gradient(
+      560px circle at 88% 8%,
+      rgba(241, 174, 110, 0.55),
+      transparent 55%
+    ),
+    radial-gradient(
+      400px circle at 12% 60%,
+      rgba(170, 130, 95, 0.18),
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      #f4daad 0%,
+      #efcc94 28%,
+      #e8c08a 52%,
+      #ddb47a 78%,
+      #cfa367 100%
+    ) !important;
+}
+
+/* Stigande sol — fast halvcirkel i terracotta uppe till höger.
+   box-shadow ger två koncentriska "vibration"-ringar runt skivan
+   (Memphis-eko); en långsam puls håller scenen levande. */
+.theme-summer .theme-sun {
+  top: -110px;
+  right: -55px;
+  width: 250px;
+  height: 250px;
+  border-radius: 9999px;
+  /* Två lager: en liten "glint" uppe-vänster ovanpå en flerstop radial.
+     Botten blir markant mörkare än toppen — ger känslan av en
+     tredimensionell skiva snarare än en platt cirkel. */
+  background-image: radial-gradient(
+      circle at 28% 24%,
+      rgba(255, 220, 180, 0.7),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 35% 55%,
+      #f0824a 0%,
+      #d75833 28%,
+      var(--terracotta) 52%,
+      #9c3712 82%,
+      #6e2509 100%
+    );
+  box-shadow:
+    /* yttre halo-ringar (Memphis-eko) */
+    0 0 0 14px rgba(192, 75, 30, 0.08),
+    0 0 0 34px rgba(192, 75, 30, 0.04),
+    /* mörk gjuten skugga under solen */ 0 30px 60px -20px
+      rgba(110, 37, 9, 0.45),
+    /* inre skugga från nedre höger — ger sfärisk volym */ inset -10px -14px
+      28px rgba(110, 37, 9, 0.45);
+  animation: summer-sun-pulse 9s ease-in-out infinite;
+}
+
+@keyframes summer-sun-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 14px rgba(192, 75, 30, 0.08),
+      0 0 0 34px rgba(192, 75, 30, 0.04),
+      0 30px 60px -20px rgba(110, 37, 9, 0.45),
+      inset -10px -14px 28px rgba(110, 37, 9, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 0 20px rgba(192, 75, 30, 0.11),
+      0 0 0 44px rgba(192, 75, 30, 0.05),
+      0 36px 72px -22px rgba(110, 37, 9, 0.5),
+      inset -10px -14px 28px rgba(110, 37, 9, 0.5);
+  }
+}
+
+/* Mjuk gloria runt solen — flerstop radial som går från brännhet
+   pearl-orange till varm bärnsten innan den fadear ut. Större och
+   mjukare nu, så himmeln runt solen bär hela klimatet. */
+.theme-summer .theme-sun-glow {
+  top: -170px;
+  right: -140px;
+  width: 440px;
+  height: 440px;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 200, 150, 0.6) 0%,
+    rgba(241, 165, 100, 0.42) 22%,
+    rgba(225, 138, 78, 0.22) 45%,
+    rgba(200, 110, 60, 0.08) 65%,
+    transparent 78%
+  );
+  filter: blur(4px);
+}
+
+/* Fyra Memphis-pinstripes som lågmäld motvikt till solens skiva.
+   Stagger-fade på sidladdning ger entrékänsla. */
+.theme-summer .theme-rays {
+  top: 96px;
+  left: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  z-index: 2;
+}
+.theme-summer .theme-rays span {
+  height: 2px;
+  background: var(--cobalt);
+  border-radius: 2px;
+  transform-origin: left center;
+  animation: summer-ray-in 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+.theme-summer .theme-rays span:nth-child(1) {
+  width: 120px;
+  opacity: 0.95;
+  animation-delay: 0.15s;
+}
+.theme-summer .theme-rays span:nth-child(2) {
+  width: 82px;
+  opacity: 0.75;
+  animation-delay: 0.25s;
+}
+.theme-summer .theme-rays span:nth-child(3) {
+  width: 52px;
+  opacity: 0.6;
+  animation-delay: 0.35s;
+}
+.theme-summer .theme-rays span:nth-child(4) {
+  width: 32px;
+  opacity: 0.45;
+  animation-delay: 0.45s;
+}
+
+@keyframes summer-ray-in {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Grain-overlay — en inline-SVG-noise som ger printad-affisch-känsla.
+   Lägger sig över hela headern i multiply blend-mode. */
+.theme-summer .theme-grain {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='5'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  opacity: 0.22;
+  mix-blend-mode: multiply;
+  z-index: 1;
+}
+
+/* Scallop — mjuk våg som separerar header från innehållet. Fyllningen
+   matchar frame:ns topp-färg (#f0d8a8) för sömlös övergång. drop-shadow
+   lägger en mjuk inåt-skugga ovanför vågkanten — ger känslan att
+   headern ligger ovanpå innehållet. */
+.theme-summer .theme-scallop {
+  fill: #f0d8a8;
+  filter: drop-shadow(0 -3px 8px rgba(110, 65, 30, 0.22))
+    drop-shadow(0 -1px 0 rgba(165, 105, 55, 0.28));
+}
+.theme-summer .theme-scallop-stroke {
+  stroke: var(--terracotta);
+  stroke-width: 0.9;
+  opacity: 0.42;
+}
+
+/* Cheeky in-joke tagline i handskrift — låter Amatic-charmen leva
+   kvar men nedtonad så den inte stör typografi-hierarkin. */
+.theme-summer .theme-wave-text {
+  font-family: "Amatic SC", cursive !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  letter-spacing: 1.5px !important;
+  fill: var(--ink) !important;
+  stroke: none !important;
+  opacity: 0.75 !important;
+}
+
+/* ---------- 5. Surface overrides (kort/paneler) ---------- */
+
+/* Cards (`bg-white/10`) — varm cream-sand i headerns ljusaste tonläge,
+   en knapp ljusare än frame så de poppar utan att bli "vita". Subtil
+   peach→sand→umber-skift i gradienten + topp-highlight + warm
+   bottom-edge ger ett emaljerat-papper-känsla. */
+.theme-summer .bg-white\/10 {
+  background-color: rgba(243, 224, 183, 0.92) !important;
+  background-image: linear-gradient(
+    180deg,
+    rgba(248, 232, 195, 0.95) 0%,
+    rgba(240, 220, 175, 0.92) 50%,
+    rgba(226, 200, 150, 0.88) 100%
+  ) !important;
+  backdrop-filter: none !important;
+  box-shadow:
+    0 1px 0 rgba(255, 245, 215, 0.7) inset,
+    0 -1px 0 rgba(140, 90, 45, 0.18) inset,
+    0 10px 28px -16px rgba(60, 42, 22, 0.32),
+    0 3px 8px -3px rgba(165, 110, 55, 0.14) !important;
+}
+
+/* `bg-white/5` — innerkort (Start/Slut-tids-rutor i historiken).
+   Skiftar något mer peach uppåt så det avviker från det större
+   cardet som omsluter det. */
+.theme-summer .bg-white\/5 {
+  background-color: rgba(239, 217, 173, 0.75) !important;
+  background-image: linear-gradient(
+    180deg,
+    rgba(247, 230, 188, 0.85) 0%,
+    rgba(232, 209, 165, 0.78) 100%
+  ) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 245, 215, 0.5) inset,
+    0 -1px 0 rgba(140, 90, 45, 0.12) inset !important;
+}
+
+.theme-summer .hover\:bg-white\/15:hover {
+  background-color: rgba(249, 233, 195, 1) !important;
+  background-image: linear-gradient(
+    180deg,
+    rgba(252, 238, 200, 1) 0%,
+    rgba(244, 226, 182, 0.96) 100%
+  ) !important;
+}
+.theme-summer .ring-white\/10 {
+  --tw-ring-color: rgba(160, 105, 55, 0.26) !important;
+}
+
+/* Disabled-states på knappar och inputs */
+.theme-summer .disabled\:bg-white\/10:disabled {
+  background-color: rgba(255, 250, 234, 0.55) !important;
+  background-image: none !important;
+}
+.theme-summer .disabled\:text-white\/40:disabled {
+  color: rgba(110, 124, 139, 0.55) !important;
+}
+.theme-summer .disabled\:shadow-none:disabled {
+  box-shadow: none !important;
+}
+
+/* ---------- 6. Textfärger — mappa text-white/X till ink-toner ---------- */
+.theme-summer .text-white {
+  color: var(--ink) !important;
+}
+.theme-summer .text-white\/90 {
+  color: rgba(30, 42, 53, 0.92) !important;
+}
+.theme-summer .text-white\/80 {
+  color: rgba(30, 42, 53, 0.82) !important;
+}
+.theme-summer .text-white\/70 {
+  color: rgba(74, 88, 103, 0.95) !important;
+}
+.theme-summer .text-white\/60 {
+  color: rgba(74, 88, 103, 0.82) !important;
+}
+.theme-summer .text-white\/55 {
+  color: rgba(110, 124, 139, 0.95) !important;
+}
+.theme-summer .text-white\/50 {
+  color: rgba(110, 124, 139, 0.82) !important;
+}
+.theme-summer .text-white\/40 {
+  color: rgba(110, 124, 139, 0.65) !important;
+}
+.theme-summer .text-white\/35 {
+  color: rgba(110, 124, 139, 0.5) !important;
+}
+.theme-summer .placeholder\:text-white\/35::placeholder {
+  color: rgba(110, 124, 139, 0.5) !important;
+}
+
+/* Eyebrow vinner över .text-white/70 — den ska vara cobalt, inte ink-soft */
+.theme-summer .theme-eyebrow.text-white\/70 {
+  color: var(--cobalt) !important;
+}
+
+/* ---------- 7. Status-pillar och accent-färger ----------
+   Pillarna får mjuka inre gradienter + tinted-inset så de läses som
+   emaljerade märken snarare än platta block. */
+.theme-summer .bg-emerald-400\/15 {
+  background-color: rgba(143, 168, 139, 0.28) !important;
+  background-image: linear-gradient(
+    180deg,
+    rgba(168, 195, 162, 0.45) 0%,
+    rgba(143, 168, 139, 0.32) 100%
+  ) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.4) inset,
+    0 -1px 0 rgba(60, 78, 62, 0.15) inset !important;
+}
+.theme-summer .text-emerald-200 {
+  color: #3e5a44 !important;
+  font-feature-settings: "tnum";
+}
+.theme-summer .ring-emerald-300\/20 {
+  --tw-ring-color: rgba(95, 130, 100, 0.5) !important;
+}
+.theme-summer .bg-sky-400\/15 {
+  background-color: rgba(61, 97, 122, 0.2) !important;
+  background-image: linear-gradient(
+    180deg,
+    rgba(85, 125, 150, 0.32) 0%,
+    rgba(61, 97, 122, 0.22) 100%
+  ) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.35) inset,
+    0 -1px 0 rgba(18, 30, 42, 0.2) inset !important;
+}
+.theme-summer .text-sky-200 {
+  color: var(--cobalt-deep) !important;
+}
+.theme-summer .ring-sky-300\/20 {
+  --tw-ring-color: rgba(50, 80, 105, 0.5) !important;
+}
+.theme-summer .text-emerald-100\/90 {
+  color: #3e5a44 !important;
+}
+.theme-summer .bg-emerald-400\/10 {
+  background-color: rgba(143, 168, 139, 0.18) !important;
+}
+
+/* ---------- 8. Buttons ---------- */
+
+/* Knapparna har ett gemensamt djup-recept:
+   - 2-stop linear gradient (något ljusare topp, något mörkare botten)
+   - layered shadow: tinted drop-shadow + närgrann shadow + topphighlight + botten-edge
+   - active-state trycker ner och dämpar drop-shadow */
+
+/* Warm — primär call-to-action (starta/avsluta dag) */
+.theme-summer .theme-btn-warm {
+  background-image: linear-gradient(
+    180deg,
+    #d5582a 0%,
+    var(--terracotta) 50%,
+    #a83d18 100%
+  ) !important;
+  color: var(--cream) !important;
+  box-shadow:
+    0 14px 28px -14px rgba(165, 61, 23, 0.65),
+    0 4px 10px -4px rgba(192, 75, 30, 0.35),
+    0 1px 0 rgba(255, 220, 195, 0.4) inset,
+    0 -1px 0 rgba(85, 25, 5, 0.25) inset !important;
+  transition:
+    filter 0.2s,
+    transform 0.1s,
+    box-shadow 0.15s !important;
+}
+.theme-summer .theme-btn-warm:hover {
+  filter: brightness(1.06) !important;
+}
+.theme-summer .theme-btn-warm:active {
+  transform: translateY(1px);
+  box-shadow:
+    0 8px 16px -10px rgba(165, 61, 23, 0.55),
+    0 2px 4px -2px rgba(192, 75, 30, 0.3),
+    0 1px 0 rgba(255, 220, 195, 0.3) inset,
+    0 -1px 0 rgba(85, 25, 5, 0.3) inset !important;
+}
+
+/* Cool — sekundär (starta båt, spara, bekräfta) i faded cobalt */
+.theme-summer .theme-btn-cool {
+  background-image: linear-gradient(
+    180deg,
+    #4b7390 0%,
+    var(--cobalt) 50%,
+    #2c4961 100%
+  ) !important;
+  color: var(--cream) !important;
+  box-shadow:
+    0 14px 28px -14px rgba(36, 63, 84, 0.65),
+    0 4px 10px -4px rgba(61, 97, 122, 0.35),
+    0 1px 0 rgba(200, 215, 230, 0.35) inset,
+    0 -1px 0 rgba(18, 30, 42, 0.3) inset !important;
+  transition:
+    filter 0.2s,
+    transform 0.1s,
+    box-shadow 0.15s !important;
+}
+.theme-summer .theme-btn-cool:hover {
+  filter: brightness(1.06) !important;
+}
+.theme-summer .theme-btn-cool:active {
+  transform: translateY(1px);
+  box-shadow:
+    0 8px 16px -10px rgba(36, 63, 84, 0.55),
+    0 2px 4px -2px rgba(61, 97, 122, 0.3),
+    0 1px 0 rgba(200, 215, 230, 0.25) inset,
+    0 -1px 0 rgba(18, 30, 42, 0.35) inset !important;
+}
+
+/* Stop — diagonal varm gradient som ekar solen, mörkare i nedre höger */
+.theme-summer .theme-btn-stop {
+  background-image: linear-gradient(
+    135deg,
+    #ee7c5a 0%,
+    #d75833 45%,
+    var(--terracotta) 75%,
+    #983914 100%
+  ) !important;
+  color: var(--cream) !important;
+  box-shadow:
+    0 14px 28px -14px rgba(165, 61, 23, 0.6),
+    0 4px 10px -4px rgba(192, 75, 30, 0.35),
+    0 1px 0 rgba(255, 215, 190, 0.4) inset,
+    0 -1px 0 rgba(85, 25, 5, 0.25) inset !important;
+}
+
+/* Lunch — sage med ink-text. Subtil grön djupgradient. */
+.theme-summer .theme-btn-lunch {
+  background-image: linear-gradient(
+    180deg,
+    #9eb798 0%,
+    var(--sage) 55%,
+    #7a957e 100%
+  ) !important;
+  color: var(--ink) !important;
+  box-shadow:
+    0 10px 22px -12px rgba(122, 149, 126, 0.55),
+    0 3px 8px -3px rgba(143, 168, 139, 0.3),
+    0 1px 0 rgba(255, 255, 255, 0.45) inset,
+    0 -1px 0 rgba(60, 78, 62, 0.18) inset !important;
+}
+.theme-summer .theme-btn-lunch:hover {
+  filter: brightness(1.05) !important;
+}
+
+/* ---------- 9. Form controls ----------
+   Inputs harmoniserar med bg-white/5-familjen (lite varmare än
+   surrounding cardet). Färgade tints på border + focus-ring. */
+.theme-summer select,
+.theme-summer textarea {
+  background-color: rgba(239, 217, 173, 0.7) !important;
+  background-image: linear-gradient(
+    180deg,
+    rgba(245, 228, 188, 0.78) 0%,
+    rgba(232, 209, 165, 0.72) 100%
+  ) !important;
+  color: var(--ink) !important;
+  border: 1px solid rgba(140, 90, 45, 0.14);
+  box-shadow: 0 1px 0 rgba(255, 245, 215, 0.45) inset !important;
+}
+.theme-summer select option {
+  background-color: #f0d8a8 !important;
+  color: var(--ink) !important;
+}
+.theme-summer .focus\:ring-sky-400\/40:focus {
+  --tw-ring-color: rgba(192, 75, 30, 0.42) !important;
+}
+
+/* ---------- 10. Modals ---------- */
+
+/* Modal-backdrop — varm-tinted istället för svart för att hålla
+   sommarpaletten konsekvent även när dialoger öppnas. */
+.theme-summer .bg-black\/60 {
+  background-color: rgba(45, 30, 18, 0.6) !important;
+}
+
+/* Modal panel — samma cream-sand-familj som korten, hög opacity för
+   solid yta. Subtil gradient + dubbla insets för djup. */
+.theme-summer .bg-slate-950\/70 {
+  background-color: rgba(243, 224, 183, 0.97) !important;
+  background-image: linear-gradient(
+    180deg,
+    rgba(249, 234, 196, 0.98) 0%,
+    rgba(237, 215, 172, 0.97) 100%
+  ) !important;
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 1px 0 rgba(255, 245, 215, 0.6) inset,
+    0 -1px 0 rgba(140, 90, 45, 0.22) inset,
+    0 24px 60px -20px rgba(60, 42, 22, 0.4) !important;
+}
+
+/* Frame radie — lite generösare i summer, mer affisch-feel */
+.theme-summer .theme-frame {
+  border-radius: 2.5rem !important;
+}
