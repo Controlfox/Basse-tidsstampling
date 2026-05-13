@@ -160,15 +160,19 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   saveBoatTimes(): void {
+    // Stäng modalen direkt — lokala state är redan uppdaterad i tjänsten,
+    // Sheet-synken sker i bakgrunden.
+    this.showEditBoatTimesModal = false;
+
     this.timeLogService
       .editActiveBoatTimes(this.selectedBoatStartTime, this.selectedBoatEndTime)
       .subscribe({
-        next: () => {
-          this.showEditBoatTimesModal = false;
-        },
         error: (e) => {
-          console.error('Fel vid ändring av tider:', e);
-          alert('Kunde inte spara tiderna. Prova igen.');
+          console.error('Fel vid Sheet-sync av tider:', e);
+          alert(
+            'Tiderna sparades lokalt men kunde inte synkas till Google Sheet. Försök igen senare.\n\n' +
+              (e && e.message ? e.message : ''),
+          );
         },
       });
   }
@@ -202,14 +206,17 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.timeLogService.endDaySession(dayEnd);
 
+    // Stäng modalen direkt — Sheet-synken körs i bakgrunden.
+    this.showDayEndModal = false;
+
     this.timeLogService.saveDaySessionToSheets().subscribe({
-      next: () => {
-        console.log('Dagsession sparad');
-        this.showDayEndModal = false;
-      },
-      error: () => {
-        console.error('Fel vid sparande av dagsession');
-        this.showDayEndModal = false;
+      next: () => console.log('Dagsession sparad'),
+      error: (e) => {
+        console.error('Fel vid sparande av dagsession:', e);
+        alert(
+          'Sluttiden sparades lokalt men kunde inte synkas till Google Sheet.\n\n' +
+            (e && e.message ? e.message : ''),
+        );
       },
     });
   }
