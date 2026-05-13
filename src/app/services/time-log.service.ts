@@ -196,24 +196,18 @@ export class TimeLogService {
     const startStr = startHHmm;
     const endStr = newEndDraft ? endHHmm : ''; // tom => "pågår"
 
-    return new Observable<void>((observer) => {
-      this.googleSheetsService
-        .updateBoatLogTimes(currentLog.id!, startStr, endStr)
-        .subscribe({
-          next: () => {
-            // Uppdatera lokalt, men avsluta INTE
-            currentLog.startTime = newStart;
-            currentLog.endTimeDraft = newEndDraft;
+    // Lokal-först: uppdatera state direkt så UI känns snabbt.
+    // Sheet-synken sker i bakgrunden via request-kön.
+    currentLog.startTime = newStart;
+    currentLog.endTimeDraft = newEndDraft;
+    this.currentLog$.next({ ...currentLog });
+    this.saveCurrentLog(currentLog);
 
-            this.currentLog$.next({ ...currentLog });
-            this.saveCurrentLog(currentLog);
-
-            observer.next();
-            observer.complete();
-          },
-          error: (e) => observer.error(e),
-        });
-    });
+    return this.googleSheetsService.updateBoatLogTimes(
+      currentLog.id!,
+      startStr,
+      endStr,
+    );
   }
 
   // ✅ Lunchpaus (30 min) som en "båt-rad"
