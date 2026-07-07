@@ -1,69 +1,56 @@
-# BasseTidsstampling
+# Basse Tidsstämpling
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.19.
+En webb-app för tidsstämpling av arbete på båtar och vid terminalen. All data sparas automatiskt till ett Google Kalkylark.
 
-## Development server
+## Så här används appen
 
-To start a local development server, run:
+### 1. Starta dagen
+Tryck **Starta dag** och välj din ankomsttid. En ny rad för dagsessionen skapas i kalkylarket.
 
-```bash
-ng serve
-```
+### 2. Logga ett arbetspass
+1. Välj vilken båt (eller plats) du ska arbeta på i listan.
+2. Tryck **Starta** — klockan börjar ticka.
+3. När passet är klart: fyll i en kort beskrivning av arbetet och tryck **Stoppa**.
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+### 3. Ändra tider i efterhand
+Tryck **Ändra tider** på ett pågående pass för att justera start- och sluttid (t.ex. om du glömde stämpla in i tid).
 
-## Code scaffolding
+### 4. Logga lunch
+Tryck **Lunch** för att registrera en 30-minuters lunchpaus. Lunchen dras automatiskt från dagens totala arbetstid.
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Deploy to DigitalOcean App Platform
-
-See `DEPLOYMENT.md` for full instructions on automated deploy via GitHub Actions + DigitalOcean App Platform. Quick steps:
-
-- Add GitHub secrets `DO_API_TOKEN` and `DOCR_REGISTRY`.
-- Push to the `main` branch to trigger the deploy workflow.
-- Manage runtime environment variables (e.g., `GOOGLE_SHEETS_KEY`) in the App Platform dashboard.
+### 5. Avsluta dagen
+Tryck **Avsluta dag** och välj din sluttid. Kalkylarket uppdateras med total arbetstid (exklusive lunch).
 
 ---
 
-## Additional Resources
+## Sätta upp en egen instans
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+### Förutsättningar
+- Node.js 18+
+- Ett Google-konto med tillgång till Google Apps Script och Google Kalkylark
+
+### 1. Konfigurera Google Apps Script
+1. Skapa ett nytt Google Kalkylark.
+2. Öppna **Tillägg → Apps Script** och klistra in koden från [apps-script-exempel](src/environments/apps-script-url.example.ts) (se notering nedan om var du hittar rätt kod).
+3. Ersätt `YOUR_SPREADSHEET_ID_HERE` med ditt kalkylarks ID och `YOUR_LONG_RANDOM_TOKEN_HERE` med ett långt slumpmässigt token.
+4. Driftsätt scriptet som webbapp (**Driftsätt → Ny driftsättning → Webbapp**, åtkomst: Alla).
+5. Kopiera URL:en till driftsättningen.
+
+### 2. Konfigurera appen
+Kopiera miljöfilen och fyll i dina värden:
+```bash
+cp src/environments/apps-script-url.example.ts src/environments/apps-script-url.ts
+```
+Öppna `src/environments/apps-script-url.ts` och ersätt platshållarna med din riktiga URL och ditt token.
+
+### 3. Kör lokalt
+```bash
+npm install
+npm start
+```
+Öppna `http://localhost:4200` i webbläsaren.
+
+### 4. Bygg för produktion
+```bash
+npm run build
+```
