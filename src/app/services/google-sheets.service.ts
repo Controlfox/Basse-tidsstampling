@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import { APPS_SCRIPT_URL } from '../../environments/apps-script-url';
+import { APPS_SCRIPT_URL, APPS_SCRIPT_TOKEN } from '../../environments/apps-script-url';
 import { Observable } from 'rxjs';
 
-const TOKEN = 'BYT_MIG_TILL_EN_LANG_SLUMP_TOKEN_BAJS';
+const TOKEN = APPS_SCRIPT_TOKEN;
 
 @Injectable({ providedIn: 'root' })
 export class GoogleSheetsService {

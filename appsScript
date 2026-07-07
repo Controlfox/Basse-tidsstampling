@@ -1,6 +1,6 @@
-const SPREADSHEET_ID = "12ia6w2tlV0DXrJcQ5Eotv39lFxWqzp2RO7uV9qiCTCE";
+const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID_HERE";
 const SHEET_NAME = "Blad1";
-const TOKEN = "BYT_MIG_TILL_EN_LANG_SLUMP_TOKEN_BAJS"; // ⚠️ Byt ut detta!
+const TOKEN = "YOUR_LONG_RANDOM_TOKEN_HERE";
 
 // Vi använder kolumn L (12) för logId
 const LOG_ID_COL = 12;
