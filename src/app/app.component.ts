@@ -50,7 +50,6 @@ export class AppComponent implements OnInit, OnDestroy {
   showDayStartModal: boolean = false;
   showDayEndModal: boolean = false;
 
-  // Modal för att ändra tider på aktiv logg
   showEditBoatTimesModal: boolean = false;
 
   selectedBoatStartTime: string = '00:00';
@@ -60,7 +59,6 @@ export class AppComponent implements OnInit, OnDestroy {
   selectedDayEndTime: string = '00:00';
   timeSlots: string[] = [];
 
-  // ✅ NYTT: lunch-status (för lila default + bekräftelse)
   lunchTaken: boolean = false;
 
   // Tema: 'original' (mörkt natt-tema) eller 'summer' (ljust sommar-tema).
@@ -82,7 +80,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.selectedBoatStartTime = nextQ;
     this.selectedBoatEndTime = '';
 
-    // ✅ Lunch-status kan ligga kvar vid reload (valfritt men brukar vara önskat)
     try {
       const stored = localStorage.getItem('lunchTaken');
       this.lunchTaken = stored === 'true';
@@ -97,7 +94,6 @@ export class AppComponent implements OnInit, OnDestroy {
         this.selectedBoat = log.boat;
         this.workDescription = log.description || '';
 
-        // (dessa values används om du öppnar edit och vill ha loggens tider)
         this.selectedBoatStartTime = this.formatHHmm(new Date(log.startTime));
         this.selectedBoatEndTime = log.endTime
           ? this.formatHHmm(new Date(log.endTime))
@@ -138,20 +134,14 @@ export class AppComponent implements OnInit, OnDestroy {
     this.timeLogService.updateCurrentDescriptionDraft(value);
   }
 
-  // ✅ Öppna “Ändra tider”:
-  // - starttid: loggens starttid om den finns, annars närmsta kvart
-  // - sluttid: om loggens endTime finns => visa den, annars default = närmsta kvart (men valfritt)
   openEditBoatTimes(log: TimeLog | null): void {
     const nextQ = this.getNextQuarterHHmm(new Date());
 
     if (log) {
-      // start: loggens start
       this.selectedBoatStartTime = log.startTime
         ? this.formatHHmm(new Date(log.startTime))
         : nextQ;
 
-      // end: om loggen har endTime => visa den, annars förifyll med närmsta kvart
-      // (om du hellre vill ha tom som default, byt nextQ till '')
       this.selectedBoatEndTime = log.endTime
         ? this.formatHHmm(new Date(log.endTime))
         : nextQ;
@@ -164,8 +154,6 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   saveBoatTimes(): void {
-    // Stäng modalen direkt — lokala state är redan uppdaterad i tjänsten,
-    // Sheet-synken sker i bakgrunden.
     this.showEditBoatTimesModal = false;
 
     this.timeLogService
@@ -181,13 +169,11 @@ export class AppComponent implements OnInit, OnDestroy {
       });
   }
 
-  // används av HTML istället för showDayStartModal = true
   openDayStartModal(): void {
     this.selectedDayStartTime = this.getNextQuarterHHmm(new Date());
     this.showDayStartModal = true;
   }
 
-  // används av HTML istället för showDayEndModal = true
   openDayEndModal(): void {
     this.selectedDayEndTime = this.getNextQuarterHHmm(new Date());
     this.showDayEndModal = true;
@@ -209,8 +195,6 @@ export class AppComponent implements OnInit, OnDestroy {
     dayEnd.setHours(hours, minutes, 0, 0);
 
     this.timeLogService.endDaySession(dayEnd);
-
-    // Stäng modalen direkt — Sheet-synken körs i bakgrunden.
     this.showDayEndModal = false;
 
     this.timeLogService.saveDaySessionToSheets().subscribe({
@@ -225,9 +209,6 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ✅ Lunch-knapp:
-  // - före klick: dov lila
-  // - efter klick: spara lunch, visa bekräftelse + knappen blir "som nu"
   addLunch(): void {
     if (this.isLogging) {
       alert('Stoppa aktivt moment innan du loggar lunch.');

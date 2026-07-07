@@ -5,14 +5,10 @@ import { HttpClient } from '@angular/common/http';
 import { GoogleSheetsService } from './google-sheets.service';
 
 export interface TimeLog {
-  id?: string; // logId (kolumn L)
+  id?: string;
   boat: string;
   startTime: Date;
-
-  // ✅ Riktig sluttid när passet är avslutat
   endTime?: Date;
-
-  // ✅ NYTT: Utkast-sluttid (ändras i modal, men avslutar inte)
   endTimeDraft?: Date;
 
   description?: string;
@@ -54,7 +50,6 @@ export class TimeLogService {
     return this.daySession$.asObservable();
   }
 
-  // --- Day session ---
   startDaySession(dayStartTime: Date): void {
     const today = new Date().toISOString().split('T')[0];
     const daySession: DaySession = {
@@ -88,7 +83,6 @@ export class TimeLogService {
     return this.daySession$.value !== null;
   }
 
-  // --- Time log START ---
   startTimeLog(boat: string): void {
     const newLog: TimeLog = {
       id: Date.now().toString(),
@@ -115,13 +109,10 @@ export class TimeLogService {
       });
   }
 
-  // --- Time log STOP (normal stop via knapp) ---
   stopTimeLog(description: string): void {
     const currentLog = this.currentLog$.value;
     if (!currentLog) return;
 
-    // ✅ Om användaren valt en sluttid i modalen (draft) -> använd den.
-    // Annars -> använd "nu".
     const chosenEnd = currentLog.endTimeDraft
       ? new Date(currentLog.endTimeDraft)
       : new Date();
@@ -154,7 +145,6 @@ export class TimeLogService {
     this.saveCurrentLog(null);
   }
 
-  // --- Update description draft continuously (saved on reload) ---
   updateCurrentDescriptionDraft(description: string): void {
     const currentLog = this.currentLog$.value;
     if (!currentLog) return;
@@ -164,9 +154,6 @@ export class TimeLogService {
     this.saveCurrentLog(currentLog);
   }
 
-  // ✅ ÄNDRADE: Edit boat times (avslutar INTE)
-  // - startTime uppdateras direkt
-  // - endHHmm sparas som endTimeDraft (utkast)
   editActiveBoatTimes(startHHmm: string, endHHmm: string): Observable<void> {
     const currentLog = this.currentLog$.value;
     if (!currentLog || !currentLog.id) {
@@ -175,12 +162,10 @@ export class TimeLogService {
 
     const dateBase = new Date(currentLog.startTime);
 
-    // Bygg ny start
     const [sh, sm] = startHHmm.split(':').map(Number);
     const newStart = new Date(dateBase);
     newStart.setHours(sh, sm, 0, 0);
 
-    // Bygg ny endDraft (valfri)
     let newEndDraft: Date | undefined = undefined;
     if (endHHmm && endHHmm.trim()) {
       const [eh, em] = endHHmm.split(':').map(Number);
@@ -210,7 +195,6 @@ export class TimeLogService {
     );
   }
 
-  // ✅ Lunchpaus (30 min) som en "båt-rad"
   addLunchBreak(): void {
     const day = this.daySession$.value;
     if (!day) return;
@@ -260,7 +244,6 @@ export class TimeLogService {
     });
   }
 
-  // --- Day session: header ---
   private saveDaySessionHeaderToSheets(dayStartTime: Date): void {
     const date = new Date().toISOString().split('T')[0];
     const dayStartTimeStr = dayStartTime.toLocaleTimeString('sv-SE', {
@@ -276,7 +259,6 @@ export class TimeLogService {
       });
   }
 
-  // --- Day session: end time update ---
   saveDaySessionToSheets(): Observable<any> {
     const daySession = this.daySession$.value;
     if (!daySession || !daySession.dayEndTime) {
@@ -318,7 +300,6 @@ export class TimeLogService {
     });
   }
 
-  // --- Local storage: current log ---
   private saveCurrentLog(log: TimeLog | null): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
@@ -351,7 +332,6 @@ export class TimeLogService {
     }
   }
 
-  // --- Local storage: time logs ---
   private loadTimeLogs(): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
@@ -367,7 +347,6 @@ export class TimeLogService {
     }
   }
 
-  // --- Local storage: day session ---
   private loadDaySession(): void {
     if (!isPlatformBrowser(this.platformId)) return;
 

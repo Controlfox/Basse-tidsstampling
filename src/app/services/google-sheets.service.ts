@@ -102,7 +102,6 @@ export class GoogleSheetsService {
       .finally(() => clearTimeout(timeoutId));
   }
 
-  // --- DAY SESSION ---
   saveDaySessionHeader(date: string, dayStartTime: string): Observable<void> {
     return this.sendGet({
       type: 'daySessionHeader',
@@ -125,7 +124,6 @@ export class GoogleSheetsService {
     });
   }
 
-  // --- BOAT LOG (start + stop update via logId in column L) ---
   startBoatLog(
     boat: string,
     startTime: string,
@@ -152,7 +150,6 @@ export class GoogleSheetsService {
     });
   }
 
-  // --- NEW: Update times for an existing log row ---
   updateBoatLogTimes(
     logId: string,
     startTime: string,
@@ -161,8 +158,8 @@ export class GoogleSheetsService {
     return this.sendGet({
       type: 'boatLogUpdateTimes',
       logId,
-      startTime, // D
-      endTime, // E ('' = pågår)
+      startTime,
+      endTime,
     });
   }
 }
